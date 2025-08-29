@@ -5,3 +5,9 @@
 - make sure the tests are comprehensive and make sense
 - make sure Gauss-Seidel, solve, and inv work
 - implement eigenvalue and eigenvector functions and determinant
+
+
+ROADMAP:
+- make sure all core functionality is solid, tested, etc.
+- implement linear system solvers like gauss-seidel, etc.
+- implement eigenvalue and eigenvector functions

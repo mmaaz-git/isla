@@ -1027,12 +1027,113 @@ def transpose(A) -> 'ndarray':
 
     return ndarray(transposed_data)
 
-def dot(A, B):
+def dot(A, B) -> 'ndarray':
     """
-    Matrix multiplication: A @ B
+    Dot product and matrix multiplication for interval arrays.
 
-    Args:
-        A: isla.ndarray
-        B: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        First input array. Can be vector or matrix.
+    B : array_like or isla.ndarray
+        Second input array. Can be vector or matrix.
+
+    Returns
+    -------
+    isla.ndarray
+        Result of dot product or matrix multiplication.
+        - Vector · Vector → Scalar interval
+        - Matrix @ Vector → Vector of intervals
+        - Matrix @ Matrix → Matrix of intervals
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> # Vector dot product
+    >>> ia.dot([1, 2], [3, 4])
+    array([11, 11])
+
+    >>> # Vector with intervals
+    >>> ia.dot([[1, 2], [3, 4]], [[0.5, 1.5], [2, 3]])
+    array([6.5, 10.5])
+
+    >>> # Matrix-vector multiplication
+    >>> A = ia.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+    >>> v = ia.array([[1, 1], [1, 1]])
+    >>> ia.dot(A, v)
+    array([[4, 6],
+           [12, 14]])
     """
-    return ndarray(np.dot(A.data, B.data))
+    if not isinstance(A, ndarray):
+        A = array(A)
+    if not isinstance(B, ndarray):
+        B = array(B)
+
+    # Use vectorized interval matrix multiplication
+    # For intervals [a,b] and [c,d], we need to compute all products and find min/max
+
+    if A.ndim == 1 and B.ndim == 1:
+        # Vector · Vector → Scalar
+        if A.shape[0] != B.shape[0]:
+            raise ValueError(f"Vector dimensions don't match: {A.shape[0]} vs {B.shape[0]}")
+
+        # Vectorized element-wise multiplication then sum
+        products = multiply(A, B)  # This handles interval multiplication properly
+        # Sum along the vector dimension
+        result_lower = np.sum(products.data[..., 0])
+        result_upper = np.sum(products.data[..., 1])
+        return ndarray([result_lower, result_upper])
+
+    elif A.ndim == 2 and B.ndim == 1:
+        # Matrix @ Vector → Vector (vectorized)
+        if A.shape[1] != B.shape[0]:
+            raise ValueError(f"Matrix-vector dimensions don't match: {A.shape} @ {B.shape}")
+
+        # Expand B to broadcast with A: (m, n, 2) * (n, 2) -> (m, n, 2)
+        B_expanded = np.broadcast_to(B.data, A.data.shape)
+
+        # Element-wise interval multiplication
+        products = multiply(ndarray(A.data), ndarray(B_expanded))
+
+        # Sum along the second dimension (columns)
+        result_lower = np.sum(products.data[..., 0], axis=1)
+        result_upper = np.sum(products.data[..., 1], axis=1)
+        result_data = np.stack([result_lower, result_upper], axis=-1)
+
+        return ndarray(result_data)
+
+    elif A.ndim == 2 and B.ndim == 2:
+        # Matrix @ Matrix → Matrix (fully vectorized using einsum)
+        if A.shape[1] != B.shape[0]:
+            raise ValueError(f"Matrix dimensions don't match: {A.shape} @ {B.shape}")
+
+        # For interval matrix multiplication, we need to handle all combinations
+        # A: (m, k, 2), B: (k, n, 2) -> Result: (m, n, 2)
+
+        # Extract bounds
+        A_lower, A_upper = A.data[..., 0], A.data[..., 1]
+        B_lower, B_upper = B.data[..., 0], B.data[..., 1]
+
+        # Compute all four possible products using broadcasting
+        # Shape: (m, k, n) for each product
+        prod_ll = np.einsum('mk,kn->mkn', A_lower, B_lower)  # A_lower @ B_lower
+        prod_lu = np.einsum('mk,kn->mkn', A_lower, B_upper)  # A_lower @ B_upper
+        prod_ul = np.einsum('mk,kn->mkn', A_upper, B_lower)  # A_upper @ B_lower
+        prod_uu = np.einsum('mk,kn->mkn', A_upper, B_upper)  # A_upper @ B_upper
+
+        # Sum along k dimension and find min/max across the four products
+        sum_ll = np.sum(prod_ll, axis=1)  # (m, n)
+        sum_lu = np.sum(prod_lu, axis=1)  # (m, n)
+        sum_ul = np.sum(prod_ul, axis=1)  # (m, n)
+        sum_uu = np.sum(prod_uu, axis=1)  # (m, n)
+
+        # Find the min and max across all combinations
+        all_sums = np.stack([sum_ll, sum_lu, sum_ul, sum_uu], axis=0)
+        result_lower = np.min(all_sums, axis=0)
+        result_upper = np.max(all_sums, axis=0)
+
+        result_data = np.stack([result_lower, result_upper], axis=-1)
+        return ndarray(result_data)
+
+    else:
+        raise ValueError(f"Unsupported dimensions for dot product: {A.shape} @ {B.shape}")

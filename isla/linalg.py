@@ -93,8 +93,7 @@ def gaussian_elimination(A, b=None):
             # a_ji := [0, 0]
             A_copy[j, i] = np.array([0.0, 0.0])
             # a_{j,i+1:n} := a_{j,i+1:n} - (a_ji/a_ii) * a_{i,i+1:n}
-            for k in range(i + 1, n_cols):
-                A_copy[j, k] = A_copy[j, k] - factor * A_copy[i, k]
+            A_copy[j, i + 1:] = A_copy[j, i + 1:] - factor * A_copy[i, i + 1:]
             # b_j := b_j - (a_ji/a_ii) * b_i
             if b_copy is not None:
                 b_copy[j] = b_copy[j] - factor * b_copy[i]

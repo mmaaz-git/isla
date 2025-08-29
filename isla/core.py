@@ -1049,19 +1049,19 @@ def dot(A, B) -> 'ndarray':
     Examples
     --------
     >>> import isla as ia
-    >>> # Vector dot product
-    >>> ia.dot([1, 2], [3, 4])
+    >>> # Vector dot product (2 intervals)
+    >>> ia.dot([[1, 2], [3, 4]], [[0.5, 1.5], [2, 3]])
+    array([ 6.5, 15. ])
+
+    >>> # Vector dot product with point intervals
+    >>> ia.dot([[1, 1], [2, 2]], [[3, 3], [4, 4]])  # [1]·[3] + [2]·[4] = [3] + [8] = [11]
     array([11, 11])
 
-    >>> # Vector with intervals
-    >>> ia.dot([[1, 2], [3, 4]], [[0.5, 1.5], [2, 3]])
-    array([6.5, 10.5])
-
     >>> # Matrix-vector multiplication
-    >>> A = ia.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-    >>> v = ia.array([[1, 1], [1, 1]])
+    >>> A = ia.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])  # 2x2 matrix of intervals
+    >>> v = ia.array([[1, 1], [1, 1]])  # vector of 2 point intervals
     >>> ia.dot(A, v)
-    array([[4, 6],
+    array([[ 4,  6],
            [12, 14]])
     """
     if not isinstance(A, ndarray):

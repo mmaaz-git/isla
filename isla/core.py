@@ -413,7 +413,7 @@ def eye(n):
 
 def reciprocal(A):
     """Compute the reciprocal of an interval [a,b] = [1/b, 1/a] (like np.reciprocal)"""
-    if ((A.lower <= 0) & (A.upper >= 0)).any():
+    if A.contains(0).any():
         raise ValueError("Cannot compute reciprocal of interval containing zero")
     return array(lower=1/A.upper, upper=1/A.lower)
 

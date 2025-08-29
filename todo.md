@@ -1,0 +1,7 @@
+- go through all of core.py and organize it
+- fix docstrings and comments
+- organize order of functions like arithmetic operations, etc
+- go through every arithmetic operation and make sure it works and has consistent logic
+- make sure the tests are comprehensive and make sense
+- make sure Gauss-Seidel, solve, and inv work
+- implement eigenvalue and eigenvector functions and determinant

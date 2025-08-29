@@ -1,8 +1,5 @@
 """
-Interval Matrix Algebra implementation.
-
-This module provides functions for performing interval linear algebra operations
-on matrices where each element is represented as an interval [min, max].
+Core functionality for isla.
 """
 
 import numpy as np
@@ -10,20 +7,53 @@ import numpy as np
 
 class ndarray:
     """
-    isla.ndarray - Interval array class for interval linear algebra.
+    isla.ndarray - An interval matrix class.
 
-    A pure Python class wrapping numpy arrays where the last dimension
-    represents intervals [min, max]. Supports natural arithmetic operations
-    with proper interval semantics.
+    This class wraps numpy arrays where the last dimension represents intervals [min, max].
+    It supports natural arithmetic operations with proper interval semantics.
     """
 
-    def __init__(self, input_array, copy=True):
+    def __init__(self, input_array : np.ndarray | list, copy : bool = True):
         """
-        Create a new ndarray.
+        Constructor for isla.ndarray.
 
-        Args:
-            input_array: Array-like input where last dimension is [min, max]
-            copy: Whether to copy the input array
+        You should probably use the `array` function instead as it is more flexible.
+
+        Parameters
+        ----------
+        input_array : np.ndarray | list
+            Array-like input where last dimension is [min, max].
+        copy : bool, optional
+            Whether to copy the input array.
+
+        Returns
+        -------
+        isla.ndarray
+            An interval matrix.
+
+        Raises
+        ------
+        ValueError
+            If the input array is not a numpy array or list.
+            If the last dimension is not 2.
+            If at least one lower bound is greater than an upper bound.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]) # just one interval
+        array([1, 2])
+
+        >>> ia.ndarray([[1,2], [3,4]]) # a vector of intervals
+        array([[1, 2],
+               [3, 4]])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]) # a matrix of intervals
+        array([[[1, 2],
+                [3, 4]],
+        <BLANKLINE>
+               [[5, 6],
+                [7, 8]]])
         """
         # Convert input to numpy array
         self.data = np.array(input_array, copy=copy)
@@ -92,102 +122,398 @@ class ndarray:
 
     @property
     def shape(self):
-        """Shape of the interval array (excluding the last [min,max] dimension)."""
+        """
+        Shape of the interval array (excluding the last [min,max] dimension).
+
+        Returns
+        -------
+        tuple
+            Shape of the interval array (excluding the last [min,max] dimension).
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).shape
+        ()
+
+        >>> ia.ndarray([[1,2], [3,4]]).shape
+        (2,)
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).shape
+        (2, 2)
+        """
         return self.data.shape[:-1]
 
     @property
     def ndim(self):
-        """Number of dimensions (excluding the last [min,max] dimension)."""
+        """
+        Number of dimensions (excluding the last [min,max] dimension).
+
+        Returns
+        -------
+        int
+            Number of dimensions (excluding the last [min,max] dimension).
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).ndim
+        0
+
+        >>> ia.ndarray([[1,2], [3,4]]).ndim
+        1
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).ndim
+        2
+        """
         return len(self.shape)
 
     @property
     def size(self):
-        """Number of intervals in the array."""
-        return np.prod(self.shape)
+        """
+        Number of intervals in the array.
+
+        Returns
+        -------
+        int
+            Number of intervals in the array.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).size
+        1
+
+        >>> ia.ndarray([[1,2], [3,4]]).size
+        2
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).size
+        4
+        """
+        result = 1
+        for dim in self.shape:
+            result *= dim
+        return result
 
     @property
     def lower(self):
-        """Get the lower bounds of all intervals."""
-        return self.data[..., 0]
+        """
+        Lower bounds of all intervals.
+
+        Returns
+        -------
+        np.ndarray | np.float64
+            Lower bounds of all intervals.
+            If only a single interval, then a float is returned.
+            Otherwise, an `np.ndarray` of floats is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).lower
+        1
+
+        >>> ia.ndarray([[1,2], [3,4]]).lower
+        array([1, 3])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).lower
+        array([[1, 3],
+               [5, 7]])
+        """
+        result = self.data[..., 0]
+        if result.ndim == 0:
+            return result.item()
+        else:
+            return result
 
     @property
     def upper(self):
-        """Get the upper bounds of all intervals."""
-        return self.data[..., 1]
+        """
+        Upper bounds of all intervals.
+
+        Returns
+        -------
+        np.ndarray | np.float64
+            Upper bounds of all intervals.
+            If only a single interval, then a float is returned.
+            Otherwise, an `np.ndarray` of floats is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).upper
+        2
+
+        >>> ia.ndarray([[1,2], [3,4]]).upper
+        array([2, 4])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).upper
+        array([[2, 4],
+               [6, 8]])
+        """
+        result = self.data[..., 1]
+        if result.ndim == 0:
+            return result.item()
+        else:
+            return result
 
     @property
     def width(self):
-        """Get the width of all intervals."""
+        """
+        Width of all intervals.
+
+        Returns
+        -------
+        np.ndarray | np.float64
+            Width of all intervals.
+            If only a single interval, then a float is returned.
+            Otherwise, an `np.ndarray` of floats is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).width
+        1
+
+        >>> ia.ndarray([[1,2], [3,4]]).width
+        array([1, 1])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).width
+        array([[1, 1],
+               [1, 1]])
+        """
         return self.upper - self.lower
 
     @property
     def midpoint(self):
-        """Get the midpoint of all intervals."""
+        """
+        Midpoint of all intervals.
+
+        Returns
+        -------
+        np.ndarray | np.float64
+            Midpoint of all intervals.
+            If only a single interval, then a float is returned.
+            Otherwise, an `np.ndarray` of floats is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).midpoint
+        1.5
+
+        >>> ia.ndarray([[1,2], [3,4]]).midpoint
+        array([1.5, 3.5])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).midpoint
+        array([[1.5, 3.5],
+               [5.5, 7.5]])
+        """
         return (self.lower + self.upper) / 2
 
     @property
     def as_np(self):
-        """Get the underlying numpy array with shape (..., 2)."""
+        """
+        Get the underlying numpy array with shape (..., 2).
+
+        Returns
+        -------
+        np.ndarray
+            Underlying numpy array with shape (..., 2).
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).as_np
+        array([1, 2])
+
+        >>> type(ia.ndarray([1,2]).as_np)
+        <class 'numpy.ndarray'>
+
+        >>> ia.ndarray([[1,2], [3,4]]).as_np
+        array([[1, 2],
+               [3, 4]])
+        """
         return self.data
 
     @property
     def T(self):
-        """Transpose of the array (like numpy's .T property)."""
+        """
+        Transpose of the array.
+
+        Returns
+        -------
+        isla.ndarray
+            Transposed array.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).T
+        array([[[1, 2],
+                [5, 6]],
+        <BLANKLINE>
+               [[3, 4],
+                [7, 8]]])
+        """
         return transpose(self)
 
+
     def contains(self, value):
-        """Check if intervals contain the given value(s)."""
+        """
+        Check if intervals contain the given value(s).
+
+        Returns
+        -------
+        np.ndarray | bool
+            Boolean array indicating which intervals contain the value(s).
+            If only a single interval, then a boolean is returned.
+            Otherwise, an `np.ndarray` of booleans is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).contains(2)
+        True
+
+        >>> ia.ndarray([[1,2], [3,4]]).contains(2)
+        array([ True, False])
+
+        >>> ia.ndarray([[[1,2], [3,4]], [[5,6], [7,8]]]).contains(2)
+        array([[ True, False],
+               [False, False]])
+        """
         return (self.lower <= value) & (value <= self.upper)
 
+
     def is_empty(self):
-        """Check if intervals are empty (represented as [nan, nan])."""
-        return np.isnan(self.lower) & np.isnan(self.upper)
+        """
+        Check if intervals are empty (represented as [nan, nan]).
+
+        Returns
+        -------
+        np.ndarray | bool
+            Boolean array indicating which intervals are empty.
+            If only a single interval, then a boolean is returned.
+            Otherwise, an `np.ndarray` of booleans is returned.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([np.nan, np.nan]).is_empty()
+        True
+
+        >>> ia.ndarray([[1,2], [np.nan, np.nan]]).is_empty()
+        array([False,  True])
+        """
+        result = np.isnan(self.lower) & np.isnan(self.upper)
+        if result.ndim == 0:
+            return bool(result)
+        else:
+            return result
+
 
     def intersect(self, other):
-        """Compute intersection with another interval array."""
+        """
+        Compute intersection with another interval array.
+
+        Note that the intersection may be empty.
+
+        Returns
+        -------
+        isla.ndarray
+            Intersection of intervals.
+
+        Examples
+        --------
+        >>> import isla as ia
+        >>> ia.ndarray([1,2]).intersect(ia.ndarray([-1,1.5]))
+        array([1. , 1.5])
+
+        >>> ia.ndarray([1,2]).intersect(ia.ndarray([3,4])) # empty intersection
+        array([nan, nan])
+
+        >>> ia.ndarray([[1,2], [3,4]]).intersect(ia.ndarray([[2,3], [4,5]]))
+        array([[2., 2.],
+               [4., 4.]])
+        """
         return intersect(self, other)
 
     def __repr__(self):
-        """String representation showing intervals clearly."""
-        return f"array({self.data.tolist()})"
+        """String representation (of the underlying numpy array)"""
+        return repr(self.data)
 
     def __str__(self):
-        """Readable string representation."""
-        if self.ndim == 1:
-            intervals = [f"[{self.data[i, 0]:.3f}, {self.data[i, 1]:.3f}]" for i in range(self.shape[0])]
-            return "array([" + ", ".join(intervals) + "])"
-        else:
-            return repr(self)
+        """Readable representation (of the underlying numpy array)"""
+        return str(self.data)
 
 
-def array(data=None, lower=None, upper=None, copy=True, intervals=True):
+## CONSTRUCTORS ##
+
+def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool = True) -> 'ndarray':
     """
     Create an isla.ndarray from various inputs.
 
-    Args:
-        data: Array-like data
-        lower: Lower bounds (used with upper)
-        upper: Upper bounds (used with lower)
-        copy: Whether to copy the input data
-        intervals: If True (default), treat data as intervals [..., 2].
-                  If False, convert each element to point interval [x, x]
+    Parameters
+    ----------
+    data : array_like or scalar, optional
+        Input data. Can be a scalar, list, or numpy array.
+        - If scalar: creates a point interval [data, data]
+        - If array-like with last dimension 2 and intervals=True: treats as intervals
+        - Otherwise: converts each element to point interval [x, x]
+    lower : array_like, optional
+        Lower bounds for intervals. Must be used with upper.
+    upper : array_like, optional
+        Upper bounds for intervals. Must be used with lower.
+    copy : bool
+        Whether to copy the input data. Default is True.
+    intervals : bool
+        If True (default), treat data as intervals when last dimension is 2.
+        If False, convert each element to point interval [x, x].
 
-    Examples:
-        >>> import isla
-        >>> # From intervals directly
-        >>> A = isla.array([[1, 2], [3, 4]])
-        >>>
-        >>> # From separate bounds
-        >>> B = isla.array(lower=[1, 3], upper=[2, 4])
-        >>>
-        >>> # From numpy array (convert to point intervals)
-        >>> C = isla.array([1, 2, 3], intervals=False)  # → [[1,1], [2,2], [3,3]]
-        >>>
-        >>> # From numpy array with uncertainty
-        >>> D = isla.array([[1, 1.1], [2, 2.1], [3, 3.1]], intervals=True)
+    Returns
+    -------
+    isla.ndarray
+        An interval array.
+
+    Raises
+    ------
+    ValueError
+        If neither data nor (lower, upper) are provided.
+        If both data and (lower, upper) are provided.
+        If lower and upper have different shapes.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.array(5) # point interval
+    array([5, 5])
+
+    >>> ia.array([[1, 2], [3, 4]])
+    array([[1, 2],
+           [3, 4]])
+
+    >>> ia.array(lower=[1, 3], upper=[2, 4]) # separate bounds
+    array([[1, 2],
+           [3, 4]])
+
+    >>> ia.array([1, 2, 3]) # vector of point intervals (last dim is not 2)
+    array([[1, 1],
+           [2, 2],
+           [3, 3]])
+
+    >>> ia.array([[1, 2], [3, 4]], intervals=False) # force point intervals (intervals=False)
+    array([[[1, 1],
+            [2, 2]],
+    <BLANKLINE>
+           [[3, 3],
+            [4, 4]]])
     """
+    # Case 1: Both lower and upper provided
     if lower is not None and upper is not None:
-        # Construct from separate lower/upper bounds
+        if data is not None:
+            raise ValueError("Cannot provide both 'data' and 'lower'/'upper'")
+
         lower = np.asarray(lower)
         upper = np.asarray(upper)
 
@@ -198,17 +524,20 @@ def array(data=None, lower=None, upper=None, copy=True, intervals=True):
         intervals_data = np.stack([lower, upper], axis=-1)
         return ndarray(intervals_data, copy=copy)
 
+    # Case 2: Data provided
     elif data is not None:
+        # Handle scalars - make point interval
+        if np.isscalar(data):
+            return ndarray([data, data], copy=copy)
+
         data = np.asarray(data)
 
-        if intervals:
-            # Standard case: data already formatted as [..., 2]
-            if data.shape[-1] != 2:
-                raise ValueError("When intervals=True, last dimension must be 2 for [min, max] intervals")
+        # Check if last dimension is 2 and intervals=True
+        if intervals and data.ndim > 0 and data.shape[-1] == 2:
+            # Treat as intervals
             return ndarray(data, copy=copy)
         else:
-            # Convert each element to point interval [x, x]
-            # Shape: (...) -> (..., 2)
+            # Convert to point intervals [x, x]
             point_intervals = np.stack([data, data], axis=-1)
             return ndarray(point_intervals, copy=copy)
 
@@ -283,6 +612,10 @@ def ones(shape, copy=True):
     """
     return full(shape, [1.0, 1.0], copy=copy)
 
+# should have _as_array internal function for the operations to make things more natural
+
+
+## ARITHMETIC OPERATIONS ##
 
 def negate(A):
     """
@@ -418,195 +751,6 @@ def reciprocal(A):
     return array(lower=1/A.upper, upper=1/A.lower)
 
 
-def _gauss_seidel(A, b, x0=None, max_iterations=100, tolerance=1e-6):
-    """
-    Solve Ax = b using interval Gauss-Seidel iteration.
-
-    Args:
-        A: isla.ndarray - Coefficient matrix
-        b: isla.ndarray - Right-hand side vector
-        x0: isla.ndarray - Initial guess, defaults to b if None
-        max_iterations: Maximum number of iterations
-        tolerance: Convergence tolerance
-
-    Returns:
-        isla.ndarray: Solution interval vector
-    """
-    if not isinstance(A, ndarray):
-        A = ndarray(A)
-    if not isinstance(b, ndarray):
-        b = ndarray(b)
-
-    if x0 is None:
-        x = ndarray(b.data.copy())
-    else:
-        if not isinstance(x0, ndarray):
-            x0 = ndarray(x0)
-        x = ndarray(x0.data.copy())
-
-    n = A.shape[0]
-
-    for iteration in range(max_iterations):
-        x_old = ndarray(x.data.copy())
-
-        for i in range(n):
-            # Compute sum of A[i,j] * x[j] for j != i using clean indexing
-            sum_ax = zeros((1,))
-
-            for j in range(n):
-                if i != j:
-                    a_ij = A[i:i+1, j:j+1]  # A[i,j] as 1x1 interval matrix
-                    x_j = x[j:j+1]          # x[j] as 1D interval vector
-                    prod = multiply(a_ij, x_j)
-                    sum_ax = add(sum_ax, prod)
-
-            # x[i] = (b[i] - sum_ax) / A[i,i] using clean operations
-            b_i = b[i:i+1]              # b[i] as 1D interval
-            a_ii = A[i:i+1, i:i+1]      # A[i,i] as 1x1 interval matrix
-
-            numerator = subtract(b_i, sum_ax)
-            x_i_new = divide(numerator, a_ii)
-
-            # Update x[i] cleanly
-            x[i:i+1] = x_i_new
-
-        # Check convergence using clean API
-        diff = subtract(x, x_old)
-        max_width = np.max(diff.width)
-
-        if max_width < tolerance:
-            break
-
-    return x
-
-
-def solve(A, b, max_iterations=100, tolerance=1e-6):
-    """
-    Solve the interval linear system Ax = b (like np.linalg.solve).
-
-    Args:
-        A: isla.ndarray - Coefficient matrix
-        b: isla.ndarray - Right-hand side vector
-        max_iterations: Maximum iterations for Gauss-Seidel
-        tolerance: Convergence tolerance
-
-    Returns:
-        isla.ndarray: Solution vector
-    """
-    return _gauss_seidel(A, b, max_iterations=max_iterations, tolerance=tolerance)
-
-
-def inv(A, max_iterations=100, tolerance=1e-6):
-    """
-    Compute the inverse of an interval matrix using Gauss-Seidel iteration.
-
-    Args:
-        A: isla.ndarray - Square interval matrix
-        max_iterations: Maximum iterations for Gauss-Seidel
-        tolerance: Convergence tolerance
-
-    Returns:
-        isla.ndarray: Inverse interval matrix
-    """
-    if not isinstance(A, ndarray):
-        A = ndarray(A)
-
-    n = A.shape[0]
-    identity = eye(n)
-
-    # Create result array
-    inverse_data = np.zeros((n, n, 2))
-
-    # Solve A * X = I column by column
-    for i in range(n):
-        b_column = identity[:, i]  # i-th column of identity (isla.ndarray)
-        x_column = _gauss_seidel(A, b_column, max_iterations=max_iterations, tolerance=tolerance)
-        inverse_data[:, i] = x_column.data
-
-    return ndarray(inverse_data)
-
-
-
-def dot(a, b):
-    """
-    Compute interval dot product (like np.dot).
-
-    Behavior matches numpy:
-    - 1D x 1D: vector dot product (scalar result)
-    - 2D x 1D: matrix-vector product
-    - 1D x 2D: vector-matrix product
-    - 2D x 2D: matrix-matrix product
-
-    Args:
-        a: isla.ndarray - First array
-        b: isla.ndarray - Second array
-
-    Returns:
-        isla.ndarray: Dot product result
-    """
-    if not isinstance(a, ndarray):
-        a = ndarray(a)
-    if not isinstance(b, ndarray):
-        b = ndarray(b)
-
-    # Case 1: Both 1D (vector dot product)
-    if a.ndim == 1 and b.ndim == 1:
-        if a.shape[0] != b.shape[0]:
-            raise ValueError("Vector dimensions must match for dot product")
-
-        result = ndarray([[0.0, 0.0]])
-        for i in range(a.shape[0]):
-            prod = multiply(a[i:i+1], b[i:i+1])
-            result = add(result, prod)
-        return result[0]  # Return scalar interval
-
-    # Case 2: 2D x 1D (matrix-vector)
-    elif a.ndim == 2 and b.ndim == 1:
-        if a.shape[1] != b.shape[0]:
-            raise ValueError(f"Shapes {a.shape} and {b.shape} not aligned for matrix-vector product")
-
-        result_data = np.zeros((a.shape[0], 2))
-        for i in range(a.shape[0]):
-            row_result = ndarray([[0.0, 0.0]])
-            for j in range(a.shape[1]):
-                prod = multiply(a[i:i+1, j:j+1], b[j:j+1])
-                row_result = add(row_result, prod)
-            result_data[i] = row_result.data[0]
-        return ndarray(result_data)
-
-    # Case 3: 1D x 2D (vector-matrix)
-    elif a.ndim == 1 and b.ndim == 2:
-        if a.shape[0] != b.shape[0]:
-            raise ValueError(f"Shapes {a.shape} and {b.shape} not aligned for vector-matrix product")
-
-        result_data = np.zeros((b.shape[1], 2))
-        for j in range(b.shape[1]):
-            col_result = ndarray([[0.0, 0.0]])
-            for i in range(a.shape[0]):
-                prod = multiply(a[i:i+1], b[i:i+1, j:j+1])
-                col_result = add(col_result, prod)
-            result_data[j] = col_result.data[0]
-        return ndarray(result_data)
-
-    # Case 4: 2D x 2D (matrix-matrix)
-    elif a.ndim == 2 and b.ndim == 2:
-        if a.shape[1] != b.shape[0]:
-            raise ValueError(f"Shapes {a.shape} and {b.shape} not aligned for matrix multiplication")
-
-        result_data = np.zeros((a.shape[0], b.shape[1], 2))
-        for i in range(a.shape[0]):
-            for j in range(b.shape[1]):
-                element_result = ndarray([[0.0, 0.0]])
-                for k in range(a.shape[1]):
-                    prod = multiply(a[i:i+1, k:k+1], b[k:k+1, j:j+1])
-                    element_result = add(element_result, prod)
-                result_data[i, j] = element_result.data[0]
-        return ndarray(result_data)
-
-    else:
-        raise ValueError(f"dot not implemented for {a.ndim}D x {b.ndim}D arrays")
-
-
 def divide(a, b):
     """
     Divide interval arrays: a / b (like np.divide).
@@ -647,3 +791,13 @@ def transpose(A):
     transposed_data = np.transpose(A.data, axes=tuple(range(A.data.ndim-1)[::-1]) + (A.data.ndim-1,))
 
     return ndarray(transposed_data)
+
+def dot(A, B):
+    """
+    Matrix multiplication: A @ B
+
+    Args:
+        A: isla.ndarray
+        B: isla.ndarray
+    """
+    return ndarray(np.dot(A.data, B.data))

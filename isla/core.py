@@ -691,23 +691,38 @@ def eye(n: int) -> 'ndarray':
     """
     return array(lower=np.eye(n), upper=np.eye(n))
 
-# should have _as_array internal function for the operations to make things more natural
-
 
 ## ARITHMETIC OPERATIONS ##
 
-def negate(A):
+def negate(A) -> 'ndarray':
     """
-    Negate an interval array: -[a,b] = [-b,-a]
+    Negate an interval array: -[a,b] = [-b,-a].
 
-    Args:
-        A: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        Input interval array.
 
-    Returns:
-        isla.ndarray: Negated intervals
+    Returns
+    -------
+    isla.ndarray
+        Negated intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.negate([1, 3])
+    array([-3, -1])
+
+    >>> ia.negate([[1, 2], [3, 4]])
+    array([[-2, -1],
+           [-4, -3]])
+
+    >>> ia.negate(5)  # scalar becomes point interval [5,5], then negated
+    array([-5, -5])
     """
     if not isinstance(A, ndarray):
-        A = ndarray(A)
+        A = array(A)
 
     result = np.stack([
         -A.data[..., 1],  # new min is negative of old max
@@ -717,21 +732,39 @@ def negate(A):
     return ndarray(result)
 
 
-def add(A, B):
+def add(A, B) -> 'ndarray':
     """
-    Add two interval arrays: [a,b] + [c,d] = [a+c, b+d]
+    Add two interval arrays: [a,b] + [c,d] = [a+c, b+d].
 
-    Args:
-        A: isla.ndarray
-        B: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        First input interval array.
+    B : array_like or isla.ndarray
+        Second input interval array.
 
-    Returns:
-        isla.ndarray: Sum of intervals
+    Returns
+    -------
+    isla.ndarray
+        Sum of intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.add([1, 2], [3, 4])
+    array([4, 6])
+
+    >>> ia.add([[1, 2], [3, 4]], [0.5, 1.5])  # broadcasting
+    array([[1.5, 3.5],
+           [3.5, 5.5]])
+
+    >>> ia.add([1, 3], 2)  # scalar becomes [2, 2]
+    array([3, 5])
     """
     if not isinstance(A, ndarray):
-        A = ndarray(A)
+        A = array(A)
     if not isinstance(B, ndarray):
-        B = ndarray(B)
+        B = array(B)
 
     result = np.stack([
         A.data[..., 0] + B.data[..., 0],  # Add minimums
@@ -741,35 +774,71 @@ def add(A, B):
     return ndarray(result)
 
 
-def subtract(A, B):
+def subtract(A, B) -> 'ndarray':
     """
-    Subtract interval arrays: A - B
+    Subtract interval arrays: A - B = A + (-B).
 
-    Args:
-        A: isla.ndarray
-        B: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        Minuend interval array.
+    B : array_like or isla.ndarray
+        Subtrahend interval array.
 
-    Returns:
-        isla.ndarray: Difference of intervals
+    Returns
+    -------
+    isla.ndarray
+        Difference of intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.subtract([5, 7], [1, 2])
+    array([3, 6])
+
+    >>> ia.subtract([[3, 5], [7, 9]], [1, 1])  # broadcasting
+    array([[2, 4],
+           [6, 8]])
+
+    >>> ia.subtract([4, 6], 2)  # scalar becomes [2, 2]
+    array([2, 4])
     """
     return add(A, negate(B))
 
 
-def multiply(A, B):
+def multiply(A, B) -> 'ndarray':
     """
-    Multiply interval arrays: products of all combinations, then take min/max
+    Multiply interval arrays: [a,b] * [c,d] = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)].
 
-    Args:
-        A: isla.ndarray
-        B: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        First input interval array.
+    B : array_like or isla.ndarray
+        Second input interval array.
 
-    Returns:
-        isla.ndarray: Product of intervals
+    Returns
+    -------
+    isla.ndarray
+        Product of intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.multiply([2, 3], [4, 5])
+    array([ 8, 15])
+
+    >>> ia.multiply([-1, 1], [2, 3])  # includes negative values
+    array([-3,  3])
+
+    >>> ia.multiply([[1, 2], [3, 4]], 2)  # scalar becomes [2, 2]
+    array([[2, 4],
+           [6, 8]])
     """
     if not isinstance(A, ndarray):
-        A = ndarray(A)
+        A = array(A)
     if not isinstance(B, ndarray):
-        B = ndarray(B)
+        B = array(B)
 
     # Multiply each combination of min/max
     products = np.array([
@@ -787,22 +856,124 @@ def multiply(A, B):
     return ndarray(result)
 
 
-def intersect(A, B):
+def reciprocal(A) -> 'ndarray':
     """
-    Intersect two interval arrays
+    Compute the reciprocal of an interval: 1/[a,b] = [1/b, 1/a].
 
-    Args:
-        A: isla.ndarray
-        B: isla.ndarray
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        Input interval array. Must not contain zero.
 
-    Returns:
-        isla.ndarray: Intersection of intervals. Non-overlapping intervals
-                     become [nan, nan] to indicate empty intersection.
+    Returns
+    -------
+    isla.ndarray
+        Reciprocal of intervals.
+
+    Raises
+    ------
+    ValueError
+        If any interval contains zero.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.reciprocal([2, 4])
+    array([0.25, 0.5 ])
+
+    >>> ia.reciprocal([[-2, -1], [1, 3]])
+    array([[-1.        , -0.5       ],
+           [ 0.33333333,  1.        ]])
+
+    >>> ia.reciprocal(2)  # scalar becomes [2, 2]
+    array([0.5, 0.5])
     """
     if not isinstance(A, ndarray):
-        A = ndarray(A)
+        A = array(A)
+
+    if np.any(A.contains(0)):
+        raise ValueError("Cannot compute reciprocal of interval containing zero")
+
+    return array(lower=1/A.upper, upper=1/A.lower)
+
+
+def divide(A, B) -> 'ndarray':
+    """
+    Divide interval arrays: A / B = A * (1/B).
+
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        Numerator interval array.
+    B : array_like or isla.ndarray
+        Denominator interval array. Must not contain zero.
+
+    Returns
+    -------
+    isla.ndarray
+        Division result.
+
+    Raises
+    ------
+    ValueError
+        If any interval in B contains zero.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.divide([6, 8], [2, 4])
+    array([1.5, 4. ])
+
+    >>> ia.divide([[4, 6], [8, 12]], [2, 2])  # broadcasting
+    array([[2., 3.],
+           [4., 6.]])
+
+    >>> ia.divide([10, 15], 5)  # scalar becomes [5, 5]
+    array([2., 3.])
+    """
+    if not isinstance(A, ndarray):
+        A = array(A)
     if not isinstance(B, ndarray):
-        B = ndarray(B)
+        B = array(B)
+
+    # A / B = A * (1/B)
+    B_recip = reciprocal(B)
+    return multiply(A, B_recip)
+
+
+def intersect(A, B) -> 'ndarray':
+    """
+    Intersect two interval arrays: [a,b] ∩ [c,d] = [max(a,c), min(b,d)].
+
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        First input interval array.
+    B : array_like or isla.ndarray
+        Second input interval array.
+
+    Returns
+    -------
+    isla.ndarray
+        Intersection of intervals. Non-overlapping intervals become [nan, nan].
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.intersect([1, 3], [2, 4])
+    array([2., 3.])
+
+    >>> ia.intersect([1, 2], [3, 4])  # no overlap
+    array([nan, nan])
+
+    >>> ia.intersect([[1, 3], [2, 5]], [2, 4])  # broadcasting
+    array([[2., 3.],
+           [2., 4.]])
+    """
+    if not isinstance(A, ndarray):
+        A = array(A)
+    if not isinstance(B, ndarray):
+        B = array(B)
 
     # Compute intersection bounds
     lower_bounds = np.maximum(A.data[..., 0], B.data[..., 0])  # Max of lower bounds
@@ -818,47 +989,37 @@ def intersect(A, B):
     return array(lower=lower_bounds, upper=upper_bounds)
 
 
-def reciprocal(A):
-    """Compute the reciprocal of an interval [a,b] = [1/b, 1/a] (like np.reciprocal)"""
-    if A.contains(0).any():
-        raise ValueError("Cannot compute reciprocal of interval containing zero")
-    return array(lower=1/A.upper, upper=1/A.lower)
-
-
-def divide(a, b):
+def transpose(A) -> 'ndarray':
     """
-    Divide interval arrays: a / b (like np.divide).
+    Transpose an interval array.
 
-    Args:
-        a: isla.ndarray - Numerator
-        b: isla.ndarray - Denominator
+    Parameters
+    ----------
+    A : array_like or isla.ndarray
+        Input interval array to transpose.
 
-    Returns:
-        isla.ndarray: Division result
-    """
-    if not isinstance(a, ndarray):
-        a = ndarray(a)
-    if not isinstance(b, ndarray):
-        b = ndarray(b)
+    Returns
+    -------
+    isla.ndarray
+        Transposed interval array.
 
-    # a / b = a * (1/b)
-    b_recip = reciprocal(b)
-    return multiply(a, b_recip)
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.transpose([[1, 2], [3, 4]])
+    array([[1, 2],
+           [3, 4]])
 
-
-
-def transpose(A):
-    """
-    Transpose an interval array (like np.transpose).
-
-    Args:
-        A: isla.ndarray - Array to transpose
-
-    Returns:
-        isla.ndarray: Transposed array
+    >>> A = ia.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
+    >>> ia.transpose(A)
+    array([[[1, 2],
+            [5, 6]],
+    <BLANKLINE>
+           [[3, 4],
+            [7, 8]]])
     """
     if not isinstance(A, ndarray):
-        A = ndarray(A)
+        A = array(A)
 
     # Transpose the data array, keeping the interval dimension last
     # Original shape: (..., 2) -> Transposed: (...transposed, 2)

@@ -1,9 +1,11 @@
-- go through all of core.py and organize it
-- fix docstrings and comments
-- organize order of functions like arithmetic operations, etc
-- go through every arithmetic operation and make sure it works and has consistent logic
-- make sure the tests are comprehensive and make sense
-- make sure Gauss-Seidel, solve, and inv work
+- tests for constructors and arithmetic operations
+- linalg
+    - gaussian_elimination
+    - back_substitution
+    - solve, inv
+    - gauss_seidel
+    - initial enclosure
+    - go through the horacek thesis basically
 - implement eigenvalue and eigenvector functions and determinant
 
 

@@ -274,3 +274,43 @@ def test_broadcasting_compatibility():
     # Should broadcast
     C = A + B  # (1,) + (2,) -> (2,)
     assert C.shape == (2,)
+
+
+def test_dtype_promotion_on_assignment():
+    """Test that assignment promotes dtype when needed to avoid truncation."""
+    # Create integer interval array
+    A = ia.ndarray([[1, 2], [3, 4]])  # integer dtype
+    assert A.data.dtype == np.int64
+
+    # Create float interval through division
+    float_interval = ia.ndarray([1, 1]) / ia.ndarray([2, 2])  # [0.5, 0.5]
+    assert float_interval.data.dtype == np.float64
+
+    # Assignment should promote A to float to avoid truncation
+    A[0] = float_interval
+
+    # Check that A was promoted to float dtype
+    assert A.data.dtype == np.float64
+
+    # Check that the value wasn't truncated
+    np.testing.assert_array_equal(A[0].data, [0.5, 0.5])
+
+    # Check that other elements are still correct (as floats now)
+    np.testing.assert_array_equal(A[1].data, [3.0, 4.0])
+
+
+def test_mixed_integer_float_operations():
+    """Test operations that mix integer and float intervals."""
+    # Integer intervals
+    A = ia.ndarray([[2, 2], [4, 4]])  # integer
+    B = ia.ndarray([[1, 1], [3, 3]])  # integer
+
+    # Division creates float intervals
+    factor = B[0] / A[0]  # [1,1] / [2,2] = [0.5, 0.5]
+
+    # Subtraction should work without truncation
+    result = B[1] - factor * A[1]  # [3,3] - [0.5,0.5] * [4,4] = [3,3] - [2,2] = [1,1]
+
+    # Should get exact result, not truncated
+    np.testing.assert_array_equal(result.data, [1.0, 1.0])
+    assert result.data.dtype == np.float64

@@ -526,6 +526,10 @@ def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool 
 
     # Case 2: Data provided
     elif data is not None:
+        # Handle existing isla.ndarray - just return it (with optional copy)
+        if isinstance(data, ndarray):
+            return ndarray(data.data, copy=copy)
+
         # Handle scalars - make point interval
         if np.isscalar(data):
             return ndarray([data, data], copy=copy)
@@ -596,15 +600,12 @@ def full(shape, fill_value, copy: bool = True) -> 'ndarray':
     if fill_interval.size != 1:
         raise ValueError("fill_value must be a single interval")
 
-    # Use numpy's full to create the shape, then broadcast the interval
-    full_data = np.full(shape + (2,), fill_interval.data.flatten(), dtype=float)
-
-    return ndarray(full_data, copy=False)
+    return array(lower=np.full(shape, fill_interval.lower), upper=np.full(shape, fill_interval.upper))
 
 
 def zeros(shape) -> 'ndarray':
     """
-    Create an isla.ndarray filled with zero intervals [0, 0].
+    Create an isla.ndarray filled with zero intervals [0.0, 0.0] (float).
 
     Parameters
     ----------
@@ -614,26 +615,26 @@ def zeros(shape) -> 'ndarray':
     Returns
     -------
     isla.ndarray
-        Array filled with [0, 0] intervals.
+        Array filled with [0.0, 0.0] intervals.
 
     Examples
     --------
     >>> import isla as ia
     >>> ia.zeros((2, 3))
-    array([[[0, 0],
-            [0, 0],
-            [0, 0]],
+    array([[[0., 0.],
+            [0., 0.],
+            [0., 0.]],
     <BLANKLINE>
-           [[0, 0],
-            [0, 0],
-            [0, 0]]])
+           [[0., 0.],
+            [0., 0.],
+            [0., 0.]]])
     """
-    return full(shape, [0, 0])
+    return full(shape, [0.0, 0.0])
 
 
 def ones(shape) -> 'ndarray':
     """
-    Create an isla.ndarray filled with unit intervals [1, 1].
+    Create an isla.ndarray filled with unit intervals [1.0, 1.0] (float).
 
     Parameters
     ----------
@@ -643,24 +644,24 @@ def ones(shape) -> 'ndarray':
     Returns
     -------
     isla.ndarray
-        Array filled with [1, 1] intervals.
+        Array filled with [1.0, 1.0] intervals.
 
     Examples
     --------
     >>> import isla as ia
     >>> ia.ones((2, 2))
-    array([[[1, 1],
-            [1, 1]],
+    array([[[1., 1.],
+            [1., 1.]],
     <BLANKLINE>
-           [[1, 1],
-            [1, 1]]])
+           [[1., 1.],
+            [1., 1.]]])
     """
-    return full(shape, [1, 1])
+    return full(shape, [1.0, 1.0])
 
 
 def eye(n: int) -> 'ndarray':
     """
-    Create an interval identity matrix.
+    Create an interval identity matrix (float).
 
     Parameters
     ----------
@@ -670,23 +671,23 @@ def eye(n: int) -> 'ndarray':
     Returns
     -------
     isla.ndarray
-        Identity matrix with [1, 1] on diagonal and [0, 0] elsewhere.
+        Identity matrix with [1.0, 1.0] on diagonal and [0.0, 0.0] elsewhere.
 
     Examples
     --------
     >>> import isla as ia
     >>> ia.eye(3)
-    array([[[1, 1],
-            [0, 0],
-            [0, 0]],
+    array([[[1., 1.],
+            [0., 0.],
+            [0., 0.]],
     <BLANKLINE>
-           [[0, 0],
-            [1, 1],
-            [0, 0]],
+           [[0., 0.],
+            [1., 1.],
+            [0., 0.]],
     <BLANKLINE>
-           [[0, 0],
-            [0, 0],
-            [1, 1]]])
+           [[0., 0.],
+            [0., 0.],
+            [1., 1.]]])
     """
     return array(lower=np.eye(n), upper=np.eye(n))
 

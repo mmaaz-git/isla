@@ -725,8 +725,8 @@ def negate(A) -> 'ndarray':
         A = array(A)
 
     result = np.stack([
-        -A.data[..., 1],  # new min is negative of old max
-        -A.data[..., 0]   # new max is negative of old min
+        -A.upper,  # new min is negative of old max
+        -A.lower   # new max is negative of old min
     ], axis=-1)
 
     return ndarray(result)
@@ -767,8 +767,8 @@ def add(A, B) -> 'ndarray':
         B = array(B)
 
     result = np.stack([
-        A.data[..., 0] + B.data[..., 0],  # Add minimums
-        A.data[..., 1] + B.data[..., 1]   # Add maximums
+        A.lower + B.lower,  # Add minimums
+        A.upper + B.upper   # Add maximums
     ], axis=-1)
 
     return ndarray(result)
@@ -842,10 +842,10 @@ def multiply(A, B) -> 'ndarray':
 
     # Multiply each combination of min/max
     products = np.array([
-        A.data[..., 0] * B.data[..., 0],
-        A.data[..., 0] * B.data[..., 1],
-        A.data[..., 1] * B.data[..., 0],
-        A.data[..., 1] * B.data[..., 1]
+        A.lower * B.lower,
+        A.lower * B.upper,
+        A.upper * B.lower,
+        A.upper * B.upper
     ])
 
     result = np.stack([
@@ -976,8 +976,8 @@ def intersect(A, B) -> 'ndarray':
         B = array(B)
 
     # Compute intersection bounds
-    lower_bounds = np.maximum(A.data[..., 0], B.data[..., 0])  # Max of lower bounds
-    upper_bounds = np.minimum(A.data[..., 1], B.data[..., 1])  # Min of upper bounds
+    lower_bounds = np.maximum(A.lower, B.lower)  # Max of lower bounds
+    upper_bounds = np.minimum(A.upper, B.upper)  # Min of upper bounds
 
     # Check for empty intersections (lower > upper)
     empty_mask = lower_bounds > upper_bounds

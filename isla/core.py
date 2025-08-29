@@ -545,72 +545,150 @@ def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool 
         raise ValueError("Must provide either 'data' or both 'lower' and 'upper'")
 
 
-def full(shape, fill_value, copy=True):
+def full(shape, fill_value, copy: bool = True) -> 'ndarray':
     """
-    Create an isla.ndarray filled with a given interval value (like np.full).
+    Create an isla.ndarray filled with a given interval value.
 
-    Args:
-        shape: Shape of the output array
-        fill_value: Interval to fill with, as [lower, upper] or isla.ndarray
-        copy: Whether to copy the fill_value
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the output array.
+    fill_value : array_like or isla.ndarray
+        Interval to fill with. Can be [lower, upper] or an isla.ndarray with single interval.
+    copy : bool
+        Whether to copy the fill_value. Default is True.
 
-    Returns:
-        isla.ndarray: Array filled with fill_value intervals
+    Returns
+    -------
+    isla.ndarray
+        Array filled with fill_value intervals.
 
-    Examples:
-        >>> import isla
-        >>> # Fill 2x3 array with interval [1, 2]
-        >>> A = isla.full((2, 3), [1, 2])
-        >>>
-        >>> # Fill with existing interval
-        >>> interval = isla.array([[3, 4]])
-        >>> B = isla.full((2, 2), interval[0])
+    Raises
+    ------
+    ValueError
+        If fill_value is not a valid interval specification.
+        If fill_value is an isla.ndarray with more than one interval.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.full((2, 3), [1, 2])
+    array([[[1, 2],
+            [1, 2],
+            [1, 2]],
+    <BLANKLINE>
+           [[1, 2],
+            [1, 2],
+            [1, 2]]])
+
+    >>> interval = ia.array([3, 4])
+    >>> ia.full((2, 2), interval)
+    array([[[3, 4],
+            [3, 4]],
+    <BLANKLINE>
+           [[3, 4],
+            [3, 4]]])
     """
-    # Convert fill_value to interval if needed
-    if isinstance(fill_value, ndarray):
-        if fill_value.size != 1:
-            raise ValueError("fill_value must be a single interval")
-        interval_val = fill_value.data.flatten()
-    else:
-        fill_value = np.asarray(fill_value)
-        if fill_value.shape != (2,):
-            raise ValueError("fill_value must be [lower, upper] for interval")
-        interval_val = fill_value
+    # Convert fill_value to isla.ndarray first
+    fill_interval = array(fill_value, copy=copy)
 
-    # Create array with repeated intervals
-    full_data = np.full(shape + (2,), 0.0)
-    full_data[..., 0] = interval_val[0]  # Lower bounds
-    full_data[..., 1] = interval_val[1]  # Upper bounds
+    # Ensure it's a single interval
+    if fill_interval.size != 1:
+        raise ValueError("fill_value must be a single interval")
 
-    return ndarray(full_data, copy=copy)
+    # Use numpy's full to create the shape, then broadcast the interval
+    full_data = np.full(shape + (2,), fill_interval.data.flatten(), dtype=float)
+
+    return ndarray(full_data, copy=False)
 
 
-def zeros(shape, copy=True):
+def zeros(shape) -> 'ndarray':
     """
-    Create an isla.ndarray filled with zero intervals [0, 0] (like np.zeros).
+    Create an isla.ndarray filled with zero intervals [0, 0].
 
-    Args:
-        shape: Shape of the output array
-        copy: Whether to copy the data
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the output array.
 
-    Returns:
-        isla.ndarray: Array filled with [0, 0] intervals
+    Returns
+    -------
+    isla.ndarray
+        Array filled with [0, 0] intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.zeros((2, 3))
+    array([[[0, 0],
+            [0, 0],
+            [0, 0]],
+    <BLANKLINE>
+           [[0, 0],
+            [0, 0],
+            [0, 0]]])
     """
-    return full(shape, [0.0, 0.0], copy=copy)
+    return full(shape, [0, 0])
 
 
-def ones(shape, copy=True):
+def ones(shape) -> 'ndarray':
     """
-    Create an isla.ndarray filled with one intervals [1, 1] (like np.ones).
+    Create an isla.ndarray filled with unit intervals [1, 1].
 
-    Args:
-        shape: Shape of the output array
-        copy: Whether to copy the data
+    Parameters
+    ----------
+    shape : int or sequence of ints
+        Shape of the output array.
 
-    Returns:
-        isla.ndarray: Array filled with [1, 1] intervals
+    Returns
+    -------
+    isla.ndarray
+        Array filled with [1, 1] intervals.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.ones((2, 2))
+    array([[[1, 1],
+            [1, 1]],
+    <BLANKLINE>
+           [[1, 1],
+            [1, 1]]])
     """
-    return full(shape, [1.0, 1.0], copy=copy)
+    return full(shape, [1, 1])
+
+
+def eye(n: int) -> 'ndarray':
+    """
+    Create an interval identity matrix.
+
+    Parameters
+    ----------
+    n : int
+        Size of the identity matrix (n x n).
+
+    Returns
+    -------
+    isla.ndarray
+        Identity matrix with [1, 1] on diagonal and [0, 0] elsewhere.
+
+    Examples
+    --------
+    >>> import isla as ia
+    >>> ia.eye(3)
+    array([[[1, 1],
+            [0, 0],
+            [0, 0]],
+    <BLANKLINE>
+           [[0, 0],
+            [1, 1],
+            [0, 0]],
+    <BLANKLINE>
+           [[0, 0],
+            [0, 0],
+            [1, 1]]])
+    """
+    return array(lower=np.eye(n), upper=np.eye(n))
 
 # should have _as_array internal function for the operations to make things more natural
 
@@ -737,11 +815,6 @@ def intersect(A, B):
     upper_bounds = np.where(empty_mask, np.nan, upper_bounds)
 
     return array(lower=lower_bounds, upper=upper_bounds)
-
-
-def eye(n):
-    """Create an interval identity matrix of size n x n (like np.eye)"""
-    return array(lower=np.eye(n), upper=np.eye(n))
 
 
 def reciprocal(A):

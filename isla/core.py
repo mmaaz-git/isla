@@ -118,6 +118,13 @@ class ndarray:
         """Assignment: A[0] = value"""
         if not isinstance(value, ndarray):
             value = ndarray(value)
+
+        # Promote dtype if needed to avoid truncation
+        if self.data.dtype != value.data.dtype:
+            promoted_dtype = np.result_type(self.data.dtype, value.data.dtype)
+            if self.data.dtype != promoted_dtype:
+                self.data = self.data.astype(promoted_dtype)
+
         self.data[key] = value.data
 
     @property

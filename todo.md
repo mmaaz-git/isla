@@ -1,8 +1,6 @@
 - tests for constructors and arithmetic operations
 - linalg
-    - gaussian_elimination
-    - back_substitution
-    - solve, inv
+    - inv
     - gauss_seidel
     - initial enclosure
     - go through the horacek thesis basically

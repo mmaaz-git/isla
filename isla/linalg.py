@@ -75,16 +75,29 @@ def gaussian_elimination(A, b=None):
 
     # Step 1: For rows i = 1, ..., (n-1) (in 0-based indexing: i = 0, ..., n-2)
     for i in range(n_rows - 1):
-        # Step 2: For j \in 1...n, find row with 0 \notin a_ji
+        # Step 2: For j \in 1...n, find row with 0 \notin a_ji using mignitude pivoting
+        best_mignitude = 0
         pivot_row = None
         for j in range(i, n_rows):
-            if not A_copy[j, i].contains(0):  # 0 \notin a_ji
-                pivot_row = j
-                break
+            interval = A_copy[j, i]
+            if not interval.contains(0):  # 0 \notin a_ji
+                # Compute mignitude: min(|lower|, |upper|)
+                mig = min(abs(interval.lower), abs(interval.upper))
+                if mig > best_mignitude:
+                    best_mignitude = mig
+                    pivot_row = j
 
         # Step 3: If such row cannot be found, notify that A is possibly singular
         if pivot_row is None:
             raise ValueError(f"Matrix is possibly singular: no valid pivot found in column {i}")
+
+        # Step 3.5: Swap rows if needed to bring pivot to diagonal
+        if pivot_row != i:
+            # Swap rows i and pivot_row in A_copy
+            A_copy[[i, pivot_row]] = A_copy[[pivot_row, i]]
+            # Also swap corresponding elements in b_copy if it exists
+            if b is not None:
+                b_copy[[i, pivot_row]] = b_copy[[pivot_row, i]]
 
         # Step 4: For every row j > i set the elimination formulas
         for j in range(i + 1, n_rows):
@@ -95,10 +108,10 @@ def gaussian_elimination(A, b=None):
             # a_{j,i+1:n} := a_{j,i+1:n} - (a_ji/a_ii) * a_{i,i+1:n}
             A_copy[j, i + 1:] = A_copy[j, i + 1:] - factor * A_copy[i, i + 1:]
             # b_j := b_j - (a_ji/a_ii) * b_i
-            if b_copy is not None:
+            if b is not None:
                 b_copy[j] = b_copy[j] - factor * b_copy[i]
 
-    if b_copy is not None:
+    if b is not None:
         # Create augmented matrix [A | b] by concatenating along column axis
         b_expanded = b_copy.data.reshape(b_copy.shape[0], 1, 2)
         augmented_data = np.concatenate([A_copy.data, b_expanded], axis=1)

@@ -3,64 +3,69 @@ from hypothesis.extra import numpy as hnp
 import numpy as np
 import isla as ia
 
-# reference for Gaussian elimination
-# taken verbatim from stackoverflow
-# https://math.stackexchange.com/questions/3073083/how-to-reduce-matrix-into-row-echelon-form-in-numpy
-# numpy does not have a built-in function for row echelon form nor does scipy
-# and I don't want to import sympy just for this
-def row_echelon(A):
-    """ Return Row Echelon Form of matrix A """
-
-    # if matrix A has no columns or rows,
-    # it is already in REF, so we return itself
-    r, c = A.shape
-    if r == 0 or c == 0:
-        return A
-
-    # we search for non-zero element in the first column
-    for i in range(len(A)):
-        if A[i,0] != 0:
-            break
-    else:
-        # if all elements in the first column is zero,
-        # we perform REF on matrix from second column
-        B = row_echelon(A[:,1:])
-        # and then add the first zero-column back
-        return np.hstack([A[:,:1], B])
-
-    # if non-zero element happens not in the first row,
-    # we switch rows
-    if i > 0:
-        ith_row = A[i].copy()
-        A[i] = A[0]
-        A[0] = ith_row
-
-    # we divide first row by first element in it
-    A[0] = A[0] / A[0,0]
-    # we subtract all subsequent rows with first row (it has 1 now as first element)
-    # multiplied by the corresponding element in the first column
-    A[1:] -= A[0] * A[1:,0:1]
-
-    # we perform REF on matrix from second row, from second column
-    B = row_echelon(A[1:,1:])
-
-    # we add first row and first (zero) column, and return
-    return np.vstack([A[:1], np.hstack([A[1:,:1], B]) ])
-
-@given(st.integers(min_value=2, max_value=5).flatmap(
-    lambda n: hnp.arrays(
-        dtype=np.float64,
-        shape=(n, n), # square matrix
-        elements=st.floats(min_value=-5.0, max_value=5.0,
-                           allow_nan=False, allow_infinity=False, allow_subnormal=False)
+@given(hnp.arrays(
+    dtype = np.float64,
+    shape = st.integers(min_value=2, max_value=5).map(lambda n: (n, n)),
+    elements = st.floats(min_value=-5.0, max_value=5.0,
+                         allow_nan=False, allow_infinity=False, allow_subnormal=False)
     ).filter(lambda A: np.linalg.cond(A) < 1e3) # well-conditioned matrix
-))
+)
 @settings(max_examples=1000)
-def test_gaussian_elimination_point_intervals(A):
-    scipy_ref = row_echelon(A)
+def test_gaussian_elimination_point_intervals_is_ref(A):
+    """
+    Test that applying Gaussian elimination to a point interval matrix results in a row echelon form matrix.
+    """
 
     isla_A = ia.array(A, intervals=False) # treat as point intervals
     isla_ref = ia.linalg.gaussian_elimination(isla_A) # row echelon form
-    assert np.allclose(isla_ref.lower, isla_ref.upper)
-    assert np.allclose(isla_ref.lower, scipy_ref)
 
+    # should still be point intervals
+    assert np.all(isla_ref.width == 0)
+
+    # should be upper triangular matrix
+    for i in range(isla_ref.shape[0]):
+        for j in range(i):
+            assert isla_ref[i, j].lower == 0
+            assert isla_ref[i, j].upper == 0
+
+    # diagonal elements should be non-zero
+    for i in range(isla_ref.shape[0]):
+        assert isla_ref[i, i].lower != 0
+        assert isla_ref[i, i].upper != 0
+
+
+@given(st.integers(min_value=2, max_value=5).flatmap(
+    # make upper triangular matrix
+    lambda n: st.tuples(
+        hnp.arrays(
+            dtype=np.float64,
+            shape=(n, n),
+            elements=st.floats(min_value=-5.0, max_value=5.0,
+                               allow_nan=False, allow_infinity=False, allow_subnormal=False)
+        ).map(lambda A: np.triu(A))
+         .filter(lambda U: np.linalg.cond(U) < 1e3),
+        hnp.arrays(
+            dtype=np.float64,
+            shape=(n,),
+            elements=st.floats(min_value=-5.0, max_value=5.0,
+                               allow_nan=False, allow_infinity=False, allow_subnormal=False)
+        )
+    )
+))
+@settings(max_examples=1000)
+def test_back_substitution_point_intervals(Ub):
+    """
+    Test that back substitution produces x such that Ux = b.
+    """
+    U, b = Ub
+
+    isla_U = ia.array(U, intervals=False)
+    isla_b = ia.array(b, intervals=False)
+
+    # Solve Ux = b using back substitution
+    x = ia.linalg.back_substitution(isla_U, isla_b)
+
+    # Check: U @ x should equal b
+    result = isla_U @ x
+    assert np.allclose(result.lower, b, rtol=1e-8, atol=1e-8)
+    assert np.allclose(result.upper, b, rtol=1e-8, atol=1e-8)

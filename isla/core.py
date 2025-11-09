@@ -457,7 +457,7 @@ class ndarray:
 
 ## CONSTRUCTORS ##
 
-def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool = True) -> 'ndarray':
+def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool = True) -> ndarray:
     """
     Create an isla.ndarray from various inputs.
 
@@ -556,7 +556,7 @@ def array(data=None, lower=None, upper=None, copy: bool = True, intervals: bool 
         raise ValueError("Must provide either 'data' or both 'lower' and 'upper'")
 
 
-def full(shape, fill_value, copy: bool = True) -> 'ndarray':
+def full(shape, fill_value, copy: bool = True) -> ndarray:
     """
     Create an isla.ndarray filled with a given interval value.
 
@@ -610,7 +610,7 @@ def full(shape, fill_value, copy: bool = True) -> 'ndarray':
     return array(lower=np.full(shape, fill_interval.lower), upper=np.full(shape, fill_interval.upper))
 
 
-def zeros(shape) -> 'ndarray':
+def zeros(shape) -> ndarray:
     """
     Create an isla.ndarray filled with zero intervals [0.0, 0.0] (float).
 
@@ -639,7 +639,7 @@ def zeros(shape) -> 'ndarray':
     return full(shape, [0.0, 0.0])
 
 
-def ones(shape) -> 'ndarray':
+def ones(shape) -> ndarray:
     """
     Create an isla.ndarray filled with unit intervals [1.0, 1.0] (float).
 
@@ -666,7 +666,7 @@ def ones(shape) -> 'ndarray':
     return full(shape, [1.0, 1.0])
 
 
-def eye(n: int) -> 'ndarray':
+def eye(n: int) -> ndarray:
     """
     Create an interval identity matrix (float).
 
@@ -701,7 +701,7 @@ def eye(n: int) -> 'ndarray':
 
 ## ARITHMETIC OPERATIONS ##
 
-def negate(A) -> 'ndarray':
+def negate(A) -> ndarray:
     """
     Negate an interval array: -[a,b] = [-b,-a].
 
@@ -739,7 +739,7 @@ def negate(A) -> 'ndarray':
     return ndarray(result)
 
 
-def add(A, B) -> 'ndarray':
+def add(A, B) -> ndarray:
     """
     Add two interval arrays: [a,b] + [c,d] = [a+c, b+d].
 
@@ -781,7 +781,7 @@ def add(A, B) -> 'ndarray':
     return ndarray(result)
 
 
-def subtract(A, B) -> 'ndarray':
+def subtract(A, B) -> ndarray:
     """
     Subtract interval arrays: A - B = A + (-B).
 
@@ -813,7 +813,7 @@ def subtract(A, B) -> 'ndarray':
     return add(A, negate(B))
 
 
-def multiply(A, B) -> 'ndarray':
+def multiply(A, B) -> ndarray:
     """
     Multiply interval arrays: [a,b] * [c,d] = [min(ac,ad,bc,bd), max(ac,ad,bc,bd)].
 
@@ -863,7 +863,7 @@ def multiply(A, B) -> 'ndarray':
     return ndarray(result)
 
 
-def reciprocal(A) -> 'ndarray':
+def reciprocal(A) -> ndarray:
     """
     Compute the reciprocal of an interval: 1/[a,b] = [1/b, 1/a].
 
@@ -948,7 +948,7 @@ def divide(A, B) -> 'ndarray':
     return multiply(A, B_recip)
 
 
-def intersect(A, B) -> 'ndarray':
+def intersect(A, B) -> ndarray:
     """
     Intersect two interval arrays: [a,b] ∩ [c,d] = [max(a,c), min(b,d)].
 

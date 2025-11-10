@@ -6,6 +6,7 @@ import numpy as np
 import isla as ia
 
 # helpful things to compute when analyzing properties of interval matrices
+
 def comparison_matrix(A):
     C = np.zeros((A.shape[0], A.shape[0]))
 
@@ -31,6 +32,8 @@ def mag(a):
     assert a.shape == ()
     return max(abs(a.lower), abs(a.upper))
 
+# properties of real i.e., scalar matrices that are helpful
+
 def _is_Z_matrix_real(A: np.ndarray):
     """
     Helper function to check if a real matrix is a Z-matrix.
@@ -42,15 +45,6 @@ def _is_Z_matrix_real(A: np.ndarray):
                 return False
     return True
 
-def is_Z_matrix(A):
-    """
-    An interval matrix is a Z-matrix if all A in the interval matrix are Z-matrices.
-    This is equivalent to all the upper bounds of off-diagonal elements being non-positive.
-    Or, the upper bound matrix being a Z-matrix.
-    """
-
-    return _is_Z_matrix_real(A.upper)
-
 def _is_M_matrix_real(A: np.ndarray):
     """
     Helper function to check if a real matrix is an M-matrix.
@@ -59,7 +53,18 @@ def _is_M_matrix_real(A: np.ndarray):
     and it is non-singular, and the inverse is non-negative.
     """
 
-    return is_Z_matrix(A) and np.linalg.det(A) != 0 and np.all(np.linalg.inv(A) >= 0)
+    return _is_Z_matrix_real(A) and np.linalg.det(A) != 0 and np.all(np.linalg.inv(A) >= 0)
+
+# properties of interval matrices
+
+def is_Z_matrix(A):
+    """
+    An interval matrix is a Z-matrix if all A in the interval matrix are Z-matrices.
+    This is equivalent to all the upper bounds of off-diagonal elements being non-positive.
+    Or, the upper bound matrix being a Z-matrix.
+    """
+
+    return _is_Z_matrix_real(A.upper)
 
 def is_M_matrix(A):
     """
@@ -104,4 +109,4 @@ def is_strongly_regular(A):
     """
 
     midpoint_inverse = np.linalg.inv(A.midpoint)
-    return _is_H_matrix(A @midpoint_inverse)
+    return is_H_matrix(ia.array(midpoint_inverse, intervals=False) @ A)

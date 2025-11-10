@@ -5,8 +5,7 @@ Interval linear algebra. When your matrices contain intervals.
 
 Currently, very much a work in progress! Pre-alpha, even! User beware!
 
-So far, the basic functionality of arithmetic operations is implemented.
-Gaussian elimination and back substitution for solving linear systems are implemented, though I am still working out a bug (which I think is due to numerical instability).
+So far, the basic functionality of arithmetic operations is implemented. Gaussian elimination and back substitution for solving linear systems are implemented. I am working on implementing the properties of interval matrices. And then after that, other methods for solving linear systems like Gauss-Seidel, etc.
 
 ## Roadmap
 - Gauss-Seidel method
